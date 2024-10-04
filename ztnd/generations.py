@@ -98,8 +98,22 @@ def save_completions(completions: list[ChatCompletion], path: str | Path) -> Non
         fp.write(json.dumps(dat, indent=4))
 
 
+def load_completions(path: str | Path) -> list[ChatCompletion]:
+    path = Path(path)
+    with path.open("r") as fp:
+        dat = json.load(fp)
+    return [ChatCompletion(**el) for el in dat]
+
+
 def save_ztnd_choices(ztnd_choices: list[ZtndChoice], path: str | Path) -> None:
     path = Path(path)
     dat = [el.dict() for el in ztnd_choices]
     with path.open("w") as fp:
         fp.write(json.dumps(dat, indent=4))
+
+
+def load_ztnd_choices(path: str | Path) -> list[ZtndChoices]:
+    path = Path(path)
+    with path.open("r") as fp:
+        dat = json.load(fp)
+    return [ZtndChoice(**el) for el in dat]
