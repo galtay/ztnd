@@ -112,7 +112,7 @@ def save_ztnd_choices(ztnd_choices: list[ZtndChoice], path: str | Path) -> None:
         fp.write(json.dumps(dat, indent=4))
 
 
-def load_ztnd_choices(path: str | Path) -> list[ZtndChoices]:
+def load_ztnd_choices(path: str | Path) -> list[ZtndChoice]:
     path = Path(path)
     with path.open("r") as fp:
         dat = json.load(fp)
