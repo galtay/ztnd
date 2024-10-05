@@ -13,8 +13,8 @@ class ZtndToken(BaseModel, frozen=True):
     ipos: int
     logprob: float
 
-    def get_node(self) -> tuple[str, int]:
-        return (self.text, self.ipos)
+    def get_node_id(self) -> tuple[str, int]:
+        return f"{self.text}|{self.ipos}"
 
 
 class ZtndChoice(BaseModel, frozen=True):

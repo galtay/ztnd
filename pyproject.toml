@@ -16,6 +16,8 @@ plotly = "^5.24.1"
 ipython = "^8.28.0"
 rich = "^13.9.1"
 black = "^24.8.0"
+d3blocks = "^1.4.11"
+dash = "^2.18.1"
 
 
 [build-system]

@@ -15,7 +15,7 @@ def read_graph():
 
 
 graph = read_graph()
-start_node_id = ("Once", 0)
+start_node_id = "Once|0"
 pos = nx.bfs_layout(graph, start_node_id)
 
 
