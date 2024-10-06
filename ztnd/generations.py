@@ -13,7 +13,7 @@ class ZtndToken(BaseModel, frozen=True):
     ipos: int
     logprob: float
 
-    def get_node_id(self) -> tuple[str, int]:
+    def get_node_id(self) -> str:
         return f"{self.text}|{self.ipos}"
 
 
@@ -52,11 +52,15 @@ def get_ztnd_choices_from_completions(
 ) -> list[ZtndChoice]:
     output = []
     for completion in completions:
-        for choice_index, choice in enumerate(completion.choices):
+        for choice in completion.choices:
+            if choice.logprobs is None:
+                raise ValueError("choice.logprobs is None")
+            if choice.logprobs.content is None:
+                raise ValueError("choice.logprobs.content is None")
             ztnd_choice = ZtndChoice(
                 completion_id=completion.id,
-                choice_index=choice_index,
-                choice_id=f"{completion.id}-{choice_index}",
+                choice_index=choice.index,
+                choice_id=f"{completion.id}-{choice.index}",
                 tokens=[
                     ZtndToken(
                         text=clt.token,
