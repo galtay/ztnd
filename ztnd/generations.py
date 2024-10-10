@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 from pathlib import Path
 
@@ -8,87 +9,35 @@ from openai.types.chat.chat_completion import ChatCompletion
 from pydantic import BaseModel
 
 
-class ZtndToken(BaseModel, frozen=True):
-    text: str
-    ipos: int
-    logprob: float
-
-    def get_node_id(self) -> str:
-        return f"{self.text}|{self.ipos}"
+logger = logging.getLogger(__name__)
 
 
-class ZtndChoice(BaseModel, frozen=True):
-    completion_id: str
-    choice_index: int
-    choice_id: str
-    tokens: list[ZtndToken]
-
-    def __len__(self):
-        return len(self.tokens)
-
-
-def generate_completion(
-    model_name: str,
-    prompt: str,
-    temperature: float = 0.0,
-    n: int = 1,
+def create_completions(
+    messages: list[dict[str, str]],
+    model: str = "gpt-4o-mini",
+    logprobs: bool = True,
+    top_logprobs: int = 1,
+    max_completion_tokens: int = 64,
+    n_choices_per_call: int = 1,
     seed: int = 9237,
-) -> ChatCompletion:
-    client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
-    return client.chat.completions.create(
-        messages=[{"role": "user", "content": prompt}],
-        model=model_name,
-        temperature=temperature,
-        logprobs=True,
-        top_logprobs=1,
-        max_completion_tokens=64,
-        n=n,
-        seed=seed,
-    )
-
-
-def get_ztnd_choices_from_completions(
-    completions: list[ChatCompletion],
-) -> list[ZtndChoice]:
-    output = []
-    for completion in completions:
-        for choice in completion.choices:
-            if choice.logprobs is None:
-                raise ValueError("choice.logprobs is None")
-            if choice.logprobs.content is None:
-                raise ValueError("choice.logprobs.content is None")
-            ztnd_choice = ZtndChoice(
-                completion_id=completion.id,
-                choice_index=choice.index,
-                choice_id=f"{completion.id}-{choice.index}",
-                tokens=[
-                    ZtndToken(
-                        text=clt.token,
-                        ipos=ipos,
-                        logprob=clt.logprob,
-                    )
-                    for ipos, clt in enumerate(choice.logprobs.content)
-                ],
-            )
-            output.append(ztnd_choice)
-    return output
-
-
-def get_completions(
-    prompt: str,
-    model_name: str,
-    temperature: float,
-    n_api_calls: int = 10,
-    n_choices_per_call: int = 8,
+    temperature: float = 0.0,
+    n_api_calls: int = 1,
 ) -> list[ChatCompletion]:
+
+    client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
     completions = []
     for ii in range(n_api_calls):
-        completion = generate_completion(
-            model_name,
-            prompt,
-            temperature=temperature,
+        logger.info(f"n_api_call={ii}")
+        completion = client.chat.completions.create(
+            messages=messages,
+            model=model,
+            logprobs=logprobs,
+            top_logprobs=top_logprobs,
+            max_completion_tokens=max_completion_tokens,
             n=n_choices_per_call,
+            seed=seed,
+            temperature=temperature,
         )
         completions.append(completion)
 
@@ -107,17 +56,3 @@ def load_completions(path: str | Path) -> list[ChatCompletion]:
     with path.open("r") as fp:
         dat = json.load(fp)
     return [ChatCompletion(**el) for el in dat]
-
-
-def save_ztnd_choices(ztnd_choices: list[ZtndChoice], path: str | Path) -> None:
-    path = Path(path)
-    dat = [el.dict() for el in ztnd_choices]
-    with path.open("w") as fp:
-        fp.write(json.dumps(dat, indent=4))
-
-
-def load_ztnd_choices(path: str | Path) -> list[ZtndChoice]:
-    path = Path(path)
-    with path.open("r") as fp:
-        dat = json.load(fp)
-    return [ZtndChoice(**el) for el in dat]
