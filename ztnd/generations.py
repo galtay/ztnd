@@ -46,7 +46,7 @@ def create_completions(
 
 def save_completions(completions: list[ChatCompletion], path: str | Path) -> None:
     path = Path(path)
-    dat = [el.dict() for el in completions]
+    dat = [el.model_dump() for el in completions]
     with path.open("w") as fp:
         fp.write(json.dumps(dat, indent=4))
 

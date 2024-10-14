@@ -14,8 +14,10 @@ from ztnd.generations import (
     save_completions,
     load_completions,
 )
-from ztnd.graphs import build_graph_from_completions
-
+from ztnd.graphs import (
+    build_token_graph,
+    build_token_pos_graph,
+)
 
 logger = logging.getLogger(__name__)
 app = typer.Typer(add_completion=False)
@@ -28,6 +30,10 @@ class LogLevel(str, Enum):
     error = "error"
     critical = "critical"
 
+class GraphType(str, Enum):
+    token = "token"
+    token_pos = "token_pos"
+
 
 DEFAULT_PROMPT = """Write a short story starting with "Once upon a time"."""
 
@@ -37,9 +43,9 @@ def generate_completions(
     prompt: str = DEFAULT_PROMPT,
     model: str = "gpt-4o-mini",
     logprobs: bool = True,
-    top_logprobs: int = 20,
-    max_completion_tokens: int = 128,
-    n_choices_per_call: int = 50,
+    top_logprobs: int = 0,
+    max_completion_tokens: int = 64,
+    n_choices_per_call: int = 20,
     seed: int = 9237,
     temperature: float = 0.4,
     n_api_calls: int = 10,
@@ -70,28 +76,65 @@ def generate_completions(
 @app.command()
 def generate_graph(
     cache_path: Path,
+    graph_type: GraphType,
     log_level: LogLevel = LogLevel.info,
 ):
 
     completions = load_completions(cache_path / "completions.json")
     rich.print(completions[0].choices[0].message)
-    graph = build_graph_from_completions(completions)
-    data = nx.node_link_data(graph)
-    out_path = cache_path / "node_link_data.json"
-    with out_path.open("w") as fp:
+    if graph_type == "token":
+        graph = build_token_graph(completions)
+    elif graph_type == "token_pos":
+        graph = build_token_pos_graph(completions)
+    else:
+        raise ValueError()
+
+    data = nx.node_link_data(graph, edges="edges")
+    out_path = cache_path / graph_type
+    out_path.mkdir(parents=True, exist_ok=True)
+    with (out_path / "node_link_data.json").open("w") as fp:
         fp.write(json.dumps(data, indent=4))
+
 
 
 @app.command()
 def make_bfs_layout(
-    cache_path: Path,
-    start_node_id: str = "Once|0",
+    nld_path: Path,
+    start_node_id: str,
     log_level: LogLevel = LogLevel.info,
 ):
 
-    with open(cache_path / "node_link_data.json") as fp:
+    with open(nld_path) as fp:
         nld = json.load(fp)
-    graph = nx.node_link_graph(nld)
+    graph = nx.node_link_graph(nld, edges="edges")
+    pos = nx.bfs_layout(graph, start_node_id)
+
+    xpos = {}
+    ypos = {}
+    for k, v in pos.items():
+        xpos[k] = float(v[0])
+        ypos[k] = float(v[1])
+
+    nx.set_node_attributes(graph, xpos, "xpos")
+    nx.set_node_attributes(graph, ypos, "ypos")
+
+    data = nx.node_link_data(graph, edges="edges")
+    out_path = nld_path.parent / "bfs_node_link_data.json"
+    with out_path.open("w") as fp:
+        fp.write(json.dumps(data, indent=4))
+
+
+
+@app.command()
+def make_bfs_layout_v2(
+    nld_path: Path,
+    start_node_id: str,
+    log_level: LogLevel = LogLevel.info,
+):
+
+    with open(nld_path) as fp:
+        nld = json.load(fp)
+    graph = nx.node_link_graph(nld, edges="edges")
     pos = nx.bfs_layout(graph, start_node_id)
 
     # update the positions so that,
@@ -127,7 +170,7 @@ def make_bfs_layout(
     nx.set_node_attributes(graph, ypos, "ypos")
 
     data = nx.node_link_data(graph)
-    out_path = cache_path / "bfs_node_link_data.json"
+    out_path = nld_path.parent / "bfs_node_link_data.json"
     with out_path.open("w") as fp:
         fp.write(json.dumps(data, indent=4))
 

@@ -1,26 +1,20 @@
-[tool.poetry]
+[project]
 name = "ztnd"
 version = "0.1.0"
-description = ""
-authors = ["Gabriel Altay <gabriel.altay@gmail.com>"]
+description = "Generate LLM graphs."
 readme = "README.md"
-
-[tool.poetry.dependencies]
-python = "^3.12"
-networkx = "^3.3"
-numpy = "^2.1.1"
-openai = "^1.51.0"
-pydantic = "^2.9.2"
-tiktoken = "^0.8.0"
-plotly = "^5.24.1"
-ipython = "^8.28.0"
-rich = "^13.9.1"
-black = "^24.8.0"
-d3blocks = "^1.4.11"
-dash = "^2.18.1"
-typer = "^0.12.5"
-
-
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires-python = ">=3.10,<3.13"
+dependencies = [
+    "black>=24.10.0",
+    "ipython>=8.28.0",
+    "networkx>=3.4.1",
+    "numpy>=2.1.2",
+    "openai>=1.51.2",
+    "pip>=24.2",
+    "plotly>=5.24.1",
+    "pydantic>=2.9.2",
+    "rich>=13.9.2",
+    "scipy>=1.14.1",
+    "tiktoken>=0.8.0",
+    "typer>=0.12.5",
+]
