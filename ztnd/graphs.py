@@ -15,6 +15,7 @@ class ZtndChoice(BaseModel):
     choice_index: int
     choice: Choice
 
+
     def get_id(self):
         return f"{self.completion_id}-{self.choice_index}"
 
