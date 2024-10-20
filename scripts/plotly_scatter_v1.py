@@ -5,18 +5,19 @@ import numpy as np
 import networkx as nx
 import plotly.graph_objects as go
 
+from ztnd.generations import load_completions
+from ztnd.graphs import (
+    build_token_graph,
+    build_token_pos_tree,
+)
 
-def read_graph(nld_path: Path) -> nx.Graph:
-    with open(nld_path) as fp:
-        nld = json.load(fp)
-    graph = nx.node_link_graph(nld, edges="edges")
-    return graph
 
 def get_weight_range(graph) -> tuple[float, float]:
     weights = [edge[2].get("weight", 1) for edge in graph.edges(data=True)]
     min_weight = min(weights)
     max_weight = max(weights)
     return min_weight, max_weight
+
 
 def get_edge_traces(graph, pos):
 
@@ -33,7 +34,7 @@ def get_edge_traces(graph, pos):
         if weight_range == 0:
             normalized_weight = 5
         else:
-            normalized_weight = 1 + 9 * (weight - min_weight) / weight_range
+            normalized_weight = 1 + 40 * (weight - min_weight) / weight_range
 
         edge_trace = go.Scatter(
             x=[x0, x1, None],
@@ -65,26 +66,28 @@ def get_node_trace(graph, pos):
     )
 
     node_text = []
-    for node in graph.nodes():
-        node_text.append(f"{node}")
+    for node_id, node_meta in graph.nodes(data=True):
+        node_text.append(node_meta["label"])
 
     node_trace.text = node_text
 
     return node_trace
 
 
-#nld_path = Path("cache/2024-10-14-15-30-20/token/node_link_data.json")
-nld_path = Path("cache/2024-10-14-15-30-20/token_pos/node_link_data.json")
-graph = read_graph(nld_path)
 
+cache_base = Path("cache") / "2024-10-14-18-20-08"
+completions_path = cache_base / "completions.json"
+completions = load_completions(completions_path)
 
-if "token_pos" in str(nld_path):
-    start_node_id = "Once|0"
-else:
-    start_node_id = "Once"
+#graph = build_token_graph(completions, graph_type = "token", add_token_ids=False)
+#graph = build_token_graph(completions, graph_type = "token_pos", add_token_ids=False)
+graph = build_token_pos_tree(completions, add_token_ids=False)
+
+start_node_id = 0
 
 pos = nx.bfs_layout(graph, start_node_id)
 #pos = nx.spring_layout(graph)
+
 edge_traces = get_edge_traces(graph, pos)
 node_trace = get_node_trace(graph, pos)
 fig = go.Figure(
